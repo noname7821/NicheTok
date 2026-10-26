@@ -22,6 +22,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import TermsScreen from './NicheTok/screens/TermsScreen';
 import LoginScreen from './NicheTok/screens/LoginScreen';
 import HomeScreen from './NicheTok/screens/HomeScreen';
+import AuthScreen from './NicheTok/screens/AuthScreen';
 
 // Create stack navigator
 const Stack = createStackNavigator();
@@ -94,6 +95,7 @@ const NicheTokApp = (props) => {
         screenOptions={{ headerShown: false, animation: 'fade' }}
       >
         <Stack.Screen name="Terms" component={TermsScreen} />
+        <Stack.Screen name="Auth" component={AuthScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Home" component={HomeScreen} />
       </Stack.Navigator>
