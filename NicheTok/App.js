@@ -14,17 +14,25 @@ import {
   StatusBar,
 } from 'react-native';
 import * as Font from 'expo-font';
+import * as FileSystem from 'expo-file-system';
 
-// Navigation setup
+// TikTok credentials (your provided keys)
+const TIKTOK_CLIENT_ID = 'aw4v115rvm0ppg51';
+const TIKTOK_CLIENT_SECRET = '519w00ADXtczLmDOFNweSkHlNWf1gEws';
+const TIKTOK_REDIRECT_URI = 'exp://%1$s.snack.expo.dev/push-notice';
+const TIKTOK_SCOPES = ['user.info.basic', 'video.upload'].join(',');
+const AUTH_STORAGE_KEY = '@NicheTok:tiktok_tokens';
+
+// -------------------------------------------------------
+// NAVIGATION
+// -------------------------------------------------------
 import { createStackNavigator } from '@react-navigation/native';
 import { NavigationContainer } from '@react-navigation/native';
 
 import TermsScreen from './NicheTok/screens/TermsScreen';
 import LoginScreen from './NicheTok/screens/LoginScreen';
 import HomeScreen from './NicheTok/screens/HomeScreen';
-import AuthScreen from './NicheTok/screens/AuthScreen';
 
-// Create stack navigator
 const Stack = createStackNavigator();
 
 const NicheTokApp = (props) => {
@@ -84,7 +92,6 @@ const NicheTokApp = (props) => {
     return results;
   };
 
-  // Determine initial route
   let initialRoute = 'Terms';
   if (user && user.accessToken) initialRoute = 'Home';
   else if (!user) initialRoute = 'Terms';
@@ -95,13 +102,12 @@ const NicheTokApp = (props) => {
         screenOptions={{ headerShown: false, animation: 'fade' }}
       >
         <Stack.Screen name="Terms" component={TermsScreen} />
-        <Stack.Screen name="Auth" component={AuthScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Home" component={HomeScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
-});
+};
 
 export default function App() {
   return <NicheTokApp />;

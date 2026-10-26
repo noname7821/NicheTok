@@ -18,11 +18,12 @@ import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import * as FileSystem from 'expo-file-system';
 
-// YOUR TIKTOK DEVELOPER CREDENTIALS (do not share these publicly)
+// TikTok Developer credentials (provided by user)
 const TIKTOK_CLIENT_ID = 'aw4v115rvm0ppg51';
 const TIKTOK_CLIENT_SECRET = '519w00ADXtczLmDOFNweSkHlNWf1gEws';
 const TIKTOK_REDIRECT_URI = 'exp://%1$s.snack.expo.dev/push-notice';
 
+// OAuth scopes
 const TIKTOK_SCOPES = [
   'user.info.basic',
   'video.upload',
@@ -30,6 +31,7 @@ const TIKTOK_SCOPES = [
 
 const AUTH_STORAGE_KEY = '@NicheTok:tiktok_tokens';
 
+// Load stored tokens
 const loadStoredTokens = async () => {
   try {
     const stored = await FileSystem.getBundleItemAsync(AUTH_STORAGE_KEY);
@@ -40,6 +42,7 @@ const loadStoredTokens = async () => {
   }
 };
 
+// Save tokens
 const saveTokens = async (tokens) => {
   try {
     await FileSystem.setBundleItemAsync(AUTH_STORAGE_KEY, JSON.stringify(tokens));
@@ -50,13 +53,18 @@ const saveTokens = async (tokens) => {
 
 WebBrowser.maybeCompleteUrl();
 
+// -------------------------------------------------------
+// LOGIN SCREEN - TikTok OAuth only
+// -------------------------------------------------------
+
 const LoginScreen = ({ onLoginSuccess, onLoginError }) => {
   const [loginInProgress, setLoginInProgress] = useState(false);
 
+  // Check for stored tokens on mount
   useEffect(() => {
     (async () => {
       const stored = await loadStoredTokens();
-      if (stored) {
+      if (stored && stored.accessToken) {
         setLoginInProgress(true);
         onLoginSuccess({
           accessToken: stored.accessToken,
@@ -67,10 +75,12 @@ const LoginScreen = ({ onLoginSuccess, onLoginError }) => {
     })();
   }, [onLoginSuccess]);
 
+  // Handle TikTok login
   const handleLogin = async () => {
     setLoginInProgress(true);
 
     try {
+      // Build auth URL
       const authParams = new URLSearchParams({
         client_key: TIKTOK_CLIENT_ID,
         response_type: 'code',
@@ -81,12 +91,14 @@ const LoginScreen = ({ onLoginSuccess, onLoginError }) => {
 
       const authUrl = `https://www.tiktok.com/v2/auth/authorize/?${authParams.toString()}`;
 
+      // Begin OAuth flow
       const { type, url, cause } = await AuthSession.authenticateAsync(
         authUrl,
         AuthSession.makeRedirectUri({})
       );
 
       if (type === 'success') {
+        // Exchange code for access token
         const tokenResponse = await AuthSession.fetchTokenAsync(
           'https://open.tiktok-api.com/v2/auth/token/',
           {
@@ -102,11 +114,10 @@ const LoginScreen = ({ onLoginSuccess, onLoginError }) => {
         );
 
         if (tokenResponse.type === 'success') {
+          // Fetch user info
           const userResponse = await fetch(
             'https://open.tiktok-api.com/v2/user/info/',
-            {
-              headers: { Authorization: `Bearer ${tokenResponse.accessToken}` },
-            }
+            { headers: { Authorization: `Bearer ${tokenResponse.accessToken}` } }
           );
 
           let username = 'TikTok User';
@@ -119,6 +130,7 @@ const LoginScreen = ({ onLoginSuccess, onLoginError }) => {
             pfp = rawUser?.profile_image_url || null;
           }
 
+          // Save tokens for future launches
           await saveTokens({
             accessToken: tokenResponse.accessToken,
             refreshToken: tokenResponse.refreshToken || null,
@@ -127,20 +139,28 @@ const LoginScreen = ({ onLoginSuccess, onLoginError }) => {
             pfp,
           });
 
+          // Success callback
           if (onLoginSuccess) {
-            onLoginSuccess({ accessToken: tokenResponse.accessToken, username, pfp });
+            onLoginSuccess({
+              accessToken: tokenResponse.accessToken,
+              username,
+              pfp,
+            });
           }
         } else {
+          // Token exchange failed
           const errorMsg = tokenResponse.message || 'Unknown token exchange error';
           console.error('TikTok token exchange failed:', errorMsg);
           if (onLoginError) onLoginError(errorMsg);
           Alert.alert('Login Failed', `Could not obtain TikTok access token: ${errorMsg}`);
         }
       } else if (type === 'cancelled') {
+        // User cancelled
         console.log('TikTok auth cancelled by user');
         if (onLoginError) onLoginError('User cancelled TikTok authentication');
-        Alert.alert('Cancelled', 'TikTok authentication was cancelled.');
+        Alert.alert('Cancelled', 'TikTok authentication was cancelled by the user.');
       } else {
+        // Authentication failed
         console.error('TikTok auth failed:', type, cause);
         if (onLoginError) onLoginError('Authentication failed');
         Alert.alert('Authentication Failed', 'TikTok login failed with an unknown error.');
@@ -154,6 +174,7 @@ const LoginScreen = ({ onLoginSuccess, onLoginError }) => {
     }
   };
 
+  // UI
   if (loginInProgress) {
     return (
       <SafeAreaView style={styles.container}>
@@ -165,6 +186,11 @@ const LoginScreen = ({ onLoginSuccess, onLoginError }) => {
     );
   }
 
+  // Check if user already has stored tokens
+  if (loginInProgress) {
+    return null; // In production, would navigate home
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
@@ -172,9 +198,14 @@ const LoginScreen = ({ onLoginSuccess, onLoginError }) => {
         <Text style={styles.title}>NicheTok</Text>
         <Text style={styles.subtitle}>Repost Manager</Text>
       </View>
+
       <View style={styles.loginBox}>
         <Text style={styles.loginText}>Connect your TikTok account</Text>
-        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loginInProgress}>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handleLogin}
+          disabled={loginInProgress}
+        >
           {loginInProgress ? 'Connecting...' : 'Login with TikTok'}
         </TouchableOpacity>
         <Text style={styles.buttonHint}>
@@ -184,6 +215,10 @@ const LoginScreen = ({ onLoginSuccess, onLoginError }) => {
     </SafeAreaView>
   );
 };
+
+// -------------------------------------------------------
+// STYLES (English only, no German)
+// -------------------------------------------------------
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0a0a0a' },
