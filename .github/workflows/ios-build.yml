@@ -1,0 +1,60 @@
+name: NicheTok iOS Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Build NicheTok iOS
+    runs-on: macos-latest
+    env:
+      TIKTOK_CLIENT_ID: aw4v115rvm0ppg51
+      TIKTOK_CLIENT_SECRET: 519w00ADXtczLmDOFNweSkHlNWf1gEws
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 📦 Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 📱 Install dependencies
+        run: |
+          cd NicheTok
+          npm install
+
+      - name: 🛠️ Install Expo CLI
+        run: |
+          cd NicheTok
+          npm install -g expo-cli
+
+      - name: 🛡️ Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            NicheTok/node_modules
+            NicheTok/.expo
+          key: NicheTok-${{ hashFiles('NicheTok/package-lock.json') }}
+
+      - name: 🔨 Build iOS app
+        run: |
+          cd NicheTok
+          expo build:ios --clear-pending
+
+      - name: 📤 Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: NicheTok.ipa
+          path: NicheTok/
+          retention-days: 30
+
+      - name: 📱 Deploy to TestFlight
+        if: env.TESTFLIGHT_TOKEN != ''
+        run: |
+          cd NicheTok
+          echo "TestFlight deployment would require Apple credentials"
